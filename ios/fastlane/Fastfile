@@ -1,0 +1,86 @@
+default_platform(:ios)
+
+platform :ios do
+  desc "Setup Keychain for CI/CD"
+  lane :setup_keychain do
+    keychain_name = "fastlane_tmp.keychain"
+    keychain_password = ""
+
+    UI.message("🔐 Setting up keychain: #{keychain_name}")
+
+    # Tạo keychain mới
+    sh "security create-keychain -p \"#{keychain_password}\" #{keychain_name}"
+    sh "security list-keychains -s #{keychain_name}"
+    sh "security default-keychain -s #{keychain_name}"
+    sh "security unlock-keychain -p \"#{keychain_password}\" #{keychain_name}"
+    sh "security set-keychain-settings -t 3600 -u #{keychain_name}"
+
+    UI.message("✅ Keychain setup completed: #{keychain_name}")
+  end
+
+  desc "Push to TestFlight"
+  lane :beta do
+    # Gọi keychain setup trước khi bắt đầu
+    setup_keychain
+
+    # Đảm bảo API Key từ Apple được thiết lập đúng
+    api_key = app_store_connect_api_key(
+      key_id: "YWXHZM4D4Q",
+      issuer_id: "1eaadbd0-15bc-41bd-bfa7-a98990f91119",
+      key_filepath: "./fastlane/AuthKey_YWXHZM4D4Q.p8",
+      duration: 1200,
+      in_house: false
+    )
+
+    # Đặt MATCH_PASSWORD từ biến môi trường
+    ENV["MATCH_PASSWORD"] ||= "hihi"
+
+    # Cấu hình provisioning profile với match
+    match(
+      type: "appstore",
+      app_identifier: "com.kaneki.ken",
+      api_key: api_key,
+      team_id: "Q5DYPB5MXY",
+      keychain_name: "fastlane_tmp.keychain",
+      readonly: false
+    )
+
+    # Cập nhật cấu hình signing trong Xcode
+    update_code_signing_settings(
+      use_automatic_signing: false,
+      team_id: "Q5DYPB5MXY",
+      code_sign_identity: "Apple Distribution",
+      profile_name: "match AppStore com.kaneki.ken"
+    )
+
+    # Kiểm tra provisioning profile
+    provisioning_profiles = Dir.glob(File.expand_path("~/Library/MobileDevice/Provisioning Profiles/*.mobileprovision"))
+    
+    if provisioning_profiles.empty?
+      UI.user_error!("❌ Không tìm thấy provisioning profile nào được tải về!")
+    else
+      UI.message("✅ Danh sách provisioning profile đã tải về:")
+      provisioning_profiles.each { |profile| UI.message("- #{profile}") }
+    end
+
+    # Build ứng dụng với Xcode
+    build_ios_app(
+      scheme: "HashPassword",
+      export_method: "app-store",
+      export_options: {
+        provisioningProfiles: {
+          "com.kaneki.ken" => "match AppStore com.kaneki.ken"
+        }
+      },
+      xcargs: "DEVELOPMENT_TEAM=Q5DYPB5MXY CODE_SIGN_IDENTITY='Apple Distribution' -allowProvisioningUpdates"
+    )
+
+    # Upload lên TestFlight
+    upload_to_testflight(
+      api_key: api_key,
+      app_identifier: "com.kaneki.ken"
+    )
+
+    UI.success("🎉 Ứng dụng đã được đẩy lên TestFlight thành công!")
+  end
+end
