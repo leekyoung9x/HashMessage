@@ -4,7 +4,7 @@ platform :ios do
   desc "Setup Keychain for CI/CD"
   lane :setup_keychain do
     keychain_name = "fastlane_tmp.keychain"
-    keychain_password = ""
+    keychain_password = "hihi"
 
     UI.message("🔐 Setting up keychain: #{keychain_name}")
 
@@ -33,7 +33,7 @@ platform :ios do
     )
 
     # Đặt MATCH_PASSWORD từ biến môi trường
-    ENV["MATCH_PASSWORD"] ||= "hihi"
+    ENV["MATCH_PASSWORD"] = "hihi"
 
     # Cấu hình provisioning profile với match
     match(
