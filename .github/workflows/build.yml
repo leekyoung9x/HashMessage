@@ -1,0 +1,46 @@
+name: Build and Deploy iOS App to TestFlight
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest  # Sử dụng macOS runner
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2  # Checkout source code
+        with:
+          token: ${{ secrets.GH_ACCESS_TOKEN }}  # 🔑 Dùng token để checkout private repos
+
+      - name: Set up Git configuration with token
+        run: |
+          git config --global user.email "huytung55123@gmail.com"
+          git config --global user.name "CI/CD Bot"
+          git config --global url."https://${{ secrets.GH_ACCESS_TOKEN }}@github.com".insteadOf "https://github.com"
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 3.0  # Chỉ định phiên bản Ruby cần cài đặt
+
+      - name: Install CocoaPods dependencies
+        run: |
+          gem install cocoapods
+          npm install
+          cd ios
+          pod install  # Cài đặt Pods trong thư mục ios
+
+      - name: Install Fastlane dependencies
+        run: |
+          gem install fastlane --no-document || true
+          bundle install --quiet || true  # Nếu bạn dùng Bundler
+        continue-on-error: true  # Bỏ qua exit code 1
+
+      - name: Set locale to UTF-8
+        run: export LANG=en_US.UTF-8
+
+      - name: Build and upload to TestFlight
+        run: |
+          cd ios  # Chuyển vào thư mục iOS
+          fastlane beta  # Chạy Fastlane lane beta thông qua Bundler

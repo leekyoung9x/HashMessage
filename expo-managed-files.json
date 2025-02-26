@@ -1,0 +1,14 @@
+{
+    "ios": {
+      "excluded": [
+        "ios/fastlane/",
+        "ios/Podfile",
+        "ios/Podfile.lock",
+        "ios/HashMessage/Info.plist",
+        "ios/HashMessage.xcodeproj/",
+        "ios/HashMessage.xcworkspace/",
+        "ios/Gemfile",
+        "ios/Gemfile.lock"
+      ]
+    }
+  }
